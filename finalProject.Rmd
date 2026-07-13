@@ -1,0 +1,99 @@
+---
+title: "Final Project - STAT 1500"
+author: "Gracian Anton, Shael Kotecha, Felipe De Oliveira, Paul Hoang"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+## Background
+Predicting house prices aids in real estimation of homes, approximation of net equity for particular individuals, and areas of prospective relocation for buyers. Statistical modelling helps us understand housing markets by observing which attributes (e.g. age, area, number of rooms, etc) are able to best predict a house price. It also helps us determine which attributes should be included and excluded when predicting a house price.
+
+## Literature Review
+
+Literature Review will be completed. So far sources include the following:
+- https://jse.amstat.org/v19n3/decock.pdf - this paper deals with the importance of individual attributes in Ames Housing Dataset.
+
+```{r loading, echo = TRUE, warning = FALSE}
+library(tidyverse)
+df <- read.csv("AmesHousing.csv")
+print("Finished loading data")
+```
+### Data Cleaning
+This data cleaning step selects the relevant columns for predicting the house price, removes any rows which have null data values, adds a YearsAgo column, and converts the categorical attribute (Neighborhood) to a numerical attribute for model training.
+```{r dataCleaning, echo = TRUE}
+df <- df %>%
+    select(Overall.Qual,Gr.Liv.Area,Total.Bsmt.SF,Garage.Cars,Year.Built,Full.Bath, Bedroom.AbvGr
+           ,TotRms.AbvGrd,Garage.Area, Neighborhood, SalePrice) %>%
+    filter(if_all(everything(), ~!is.na(.))) %>%
+    mutate(YearsAgo.Built = 2026 - Year.Built) %>%
+    mutate(Neighborhood = case_when(
+      Neighborhood == "NAmes"     ~ 0,
+      Neighborhood == "Gilbert"   ~ 1,
+      Neighborhood == "StoneBr"   ~ 2,
+      Neighborhood == "NWAmes"    ~ 3,
+      Neighborhood == "Somerst"   ~ 4,
+      Neighborhood == "BrDale"    ~ 5,
+      Neighborhood == "NPkVill"   ~ 6,
+      Neighborhood == "NridgHt"   ~ 7,
+      Neighborhood == "Blmngtn"   ~ 8,
+      Neighborhood == "NoRidge"   ~ 9,
+      Neighborhood == "SawyerW"   ~ 10,
+      Neighborhood == "Sawyer"    ~ 11,
+      Neighborhood == "Greens"    ~ 12,
+      Neighborhood == "BrkSide"   ~ 13,
+      Neighborhood == "OldTown"   ~ 14,
+      Neighborhood == "IDOTRR"    ~ 15,
+      Neighborhood == "ClearCr"   ~ 16,
+      Neighborhood == "SWISU"     ~ 17,
+      Neighborhood == "Edwards"   ~ 18,
+      Neighborhood == "CollgCr"   ~ 19,
+      Neighborhood == "Crawfor"   ~ 20,
+      Neighborhood == "Blueste"   ~ 21,
+      Neighborhood == "Mitchel"   ~ 22,
+      Neighborhood == "Timber"    ~ 23,
+      Neighborhood == "MeadowV"   ~ 24,
+      Neighborhood == "Veenker"   ~ 25,
+      Neighborhood == "GrnHill"   ~ 26,
+      Neighborhood == "Landmrk"   ~ 27
+    )) %>%
+    mutate(SalePrice = log(SalePrice))
+head(df,10)
+print("Finished cleaning data")
+```
+## Exploratory Data Analysis
+### Numerical Analysis
+This numerical analyis analyzes the mean, median, standard deviation, minimum, and maximum of each column in the dataset.
+```{r numericalAnalysis, echo = TRUE, warning = FALSE}
+statistics <- df %>%
+  summarize(
+    across(everything(), list(
+      Mean = ~ mean(.),
+      Median = ~ median(.),
+      StandardDeviation = ~ sd(.),
+      Minimum = ~ min(.),
+      Maximum = ~ max(.)))
+  )
+
+statistics
+```
+
+### Visualization
+This visualization compares different attributes with each other graphically and performs a correlation analysis of the age of the house and the housing price.
+```{r visualization, echo = TRUE, warning = FALSE}
+
+df %>%
+  ggplot(mapping = aes(x = SalePrice)) + geom_histogram(bins = 30, fill='skyblue', color='black') + labs(title='Figure 1: Distribution of   House Prices', x = "# of homes", y = 'House Price')
+
+df %>%
+  ggplot(mapping = aes(x=Gr.Liv.Area, y=SalePrice)) + geom_point() + labs(title='Figure 2: Abvove Ground Living Area To House Price', x = 'Above Ground Living Area (sq. ft.)', y='House Price')
+
+df %>% 
+  ggplot(mapping = aes(x=Overall.Qual, y = SalePrice)) + geom_point() + labs(title='Figure 3: Overall Quality To Sale Price', x='Overall Quality', y='House Price')
+
+correlationDf = df[c('YearsAgo.Built','SalePrice')]
+
+cor(correlationDf, use='complete.obs')
+```
