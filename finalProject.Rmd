@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
 ```
 ## Background
-Predicting house prices aids in real estimation of homes, approximation of net equity for particular individuals, and areas of prospective relocation for buyers. Statistical modelling helps us understand housing markets by observing which attributes (e.g. age, area, number of rooms, etc) are able to best predict a house price. It also helps us determine which attributes should be included and excluded when predicting a house price.
+Predicting house prices aids in real estimation of homes, approximation of net equity for particular individuals, and areas of prospective relocation for buyers. Statistical modelling helps us understand housing markets by observing which attributes (e.g. age, area, number of rooms, etc) are able to best predict a house price. It also helps us determine which attributes should be included and excluded when predicting a house price based on their correlation to the target variable.
 
 ## Literature Review
 
@@ -96,4 +96,11 @@ df %>%
 correlationDf = df[c('YearsAgo.Built','SalePrice')]
 
 cor(correlationDf, use='complete.obs')
+``` 
+```{r regression, echo=TRUE}
+help(coef)
+
+model <- lm(SalePrice ~., data = df)
+model_summary <- summary(model)
+model_summary
 ```
