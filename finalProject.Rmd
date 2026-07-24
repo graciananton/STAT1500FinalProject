@@ -28,7 +28,6 @@ df <- df %>%
     select(Overall.Qual,Gr.Liv.Area,Total.Bsmt.SF,Garage.Cars,Year.Built,Full.Bath, Bedroom.AbvGr
            ,TotRms.AbvGrd,Garage.Area, Neighborhood, SalePrice) %>%
     filter(if_all(everything(), ~!is.na(.))) %>%
-    mutate(YearsAgo.Built = 2026 - Year.Built) %>%
     mutate(Neighborhood = case_when(
       Neighborhood == "NAmes"     ~ 0,
       Neighborhood == "Gilbert"   ~ 1,
@@ -97,10 +96,43 @@ correlationDf = df[c('YearsAgo.Built','SalePrice')]
 
 cor(correlationDf, use='complete.obs')
 ``` 
+
 ```{r regression, echo=TRUE}
-help(coef)
+help(lm)
 
 model <- lm(SalePrice ~., data = df)
-model_summary <- summary(model)
-model_summary
+
+summary <- summary(model)
+
+coefficients <- summary$coefficients[, "Estimate"]
+names <- names(coefficients)
+ 
+# paste0() concatenates the character and numeric with 0 spaces in between  and converts the numeric to a character
+regression_equation <- paste0("Sale Price = ", paste0(coefficients[1], " + "))
+for (i in 2:length(names)){
+  regression_equation = paste0(
+    regression_equation, paste0(
+      coefficients[names[i]], 
+        paste0(
+          "x",  paste0(i, paste0(ifelse(i == length(names), "", " + ")))
+        )
+    )
+  )
+}
+
+print("Regression Equation:")
+regression_equation
+
+print("Estimated Coefficients:")
+coefficients
+
+print("T Values:")
+summary$coefficients[,"t value"]
+
+print("P Values:")
+summary$coefficients[,"Pr(>|t|)"]
+
+print("Standard Error:")
+summary$coefficients[,"Std. Error"]
+
 ```
