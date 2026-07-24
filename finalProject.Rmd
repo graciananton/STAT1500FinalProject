@@ -82,7 +82,6 @@ statistics
 ### Visualization
 This visualization compares different attributes with each other graphically and performs a correlation analysis of the age of the house and the housing price.
 ```{r visualization, echo = TRUE, warning = FALSE}
-
 df %>%
   ggplot(mapping = aes(x = SalePrice)) + geom_histogram(bins = 30, fill='skyblue', color='black') + labs(title='Figure 1: Distribution of   House Prices', x = "# of homes", y = 'House Price')
 
@@ -92,13 +91,12 @@ df %>%
 df %>% 
   ggplot(mapping = aes(x=Overall.Qual, y = SalePrice)) + geom_point() + labs(title='Figure 3: Overall Quality To Sale Price', x='Overall Quality', y='House Price')
 
-correlationDf = df[c('YearsAgo.Built','SalePrice')]
+correlationDf = df[c('Year.Built','SalePrice')]
 
 cor(correlationDf, use='complete.obs')
 ``` 
 
 ```{r regression, echo=TRUE}
-help(lm)
 
 model <- lm(SalePrice ~., data = df)
 
