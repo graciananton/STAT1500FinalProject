@@ -134,3 +134,39 @@ print("Standard Error:")
 summary$coefficients[,"Std. Error"]
 
 ```
+
+## Model Fit Evaluation and Interpretation
+```{r modelEvaluation, echo=TRUE}
+
+r_squared <- summary$r.squared
+adj_r_squared <- summary$adj.r.squared
+
+cat("R-squared:", round(r_squared, 4), "\n")
+cat("Adjusted R-squared:", round(adj_r_squared, 4), "\n")
+
+f_stat <- summary$fstatistic
+f_value <- f_stat["value"]
+f_df1 <- unname(f_stat["numdf"])
+f_df2 <- unname(f_stat["dendf"])
+f_p_value <- pf(f_value, f_df1, f_df2, lower.tail = FALSE)
+
+cat("F-statistic:", round(f_value, 2), "on", f_df1, "and", f_df2, "DF\n")
+cat("Overall model p-value:", format.pval(f_p_value, digits = 3), "\n")
+
+anova_table <- anova(model)
+anova_table
+
+## Coefficient interpretation (log-linear model)
+## Since SalePrice was log-transformed, each coefficient represents
+## the percent change in SalePrice for a one-unit increase in the predictor
+pct_change <- (exp(coefficients) - 1) * 100
+
+interpretation_df <- data.frame(
+  Variable = names,
+  Coefficient = round(coefficients, 5),
+  Percent_Change_SalePrice = round(pct_change, 2)
+)
+
+print("Percent Change in Sale Price per Unit Increase:")
+interpretation_df
+```

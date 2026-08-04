@@ -11,7 +11,7 @@
 
 <meta name="author" content="Gracian Anton, Shael Kotecha, Felipe De Oliveira, Paul Hoang" />
 
-<meta name="date" content="2026-07-24" />
+<meta name="date" content="2026-08-03" />
 
 <title>Final Project - STAT 1500</title>
 
@@ -353,7 +353,7 @@ display: none;
 <h1 class="title toc-ignore">Final Project - STAT 1500</h1>
 <h4 class="author">Gracian Anton, Shael Kotecha, Felipe De Oliveira,
 Paul Hoang</h4>
-<h4 class="date">2026-07-24</h4>
+<h4 class="date">2026-08-03</h4>
 
 </div>
 
@@ -592,6 +592,71 @@ print(&quot;Regression Equation:&quot;)</code></pre>
 ##  Neighborhood 
 ##  4.192007e-04</code></pre>
 </div>
+</div>
+<div id="model-fit-evaluation-and-interpretation" class="section level2">
+<h2>Model Fit Evaluation and Interpretation</h2>
+<pre class="r"><code>r_squared &lt;- summary$r.squared
+adj_r_squared &lt;- summary$adj.r.squared
+
+cat(&quot;R-squared:&quot;, round(r_squared, 4), &quot;\n&quot;)</code></pre>
+<pre><code>## R-squared: 0.8223</code></pre>
+<pre class="r"><code>cat(&quot;Adjusted R-squared:&quot;, round(adj_r_squared, 4), &quot;\n&quot;)</code></pre>
+<pre><code>## Adjusted R-squared: 0.8217</code></pre>
+<pre class="r"><code>f_stat &lt;- summary$fstatistic
+f_value &lt;- f_stat[&quot;value&quot;]
+f_df1 &lt;- unname(f_stat[&quot;numdf&quot;])
+f_df2 &lt;- unname(f_stat[&quot;dendf&quot;])
+f_p_value &lt;- pf(f_value, f_df1, f_df2, lower.tail = FALSE)
+
+cat(&quot;F-statistic:&quot;, round(f_value, 2), &quot;on&quot;, f_df1, &quot;and&quot;, f_df2, &quot;DF\n&quot;)</code></pre>
+<pre><code>## F-statistic: 1349.85 on 10 and 2917 DF</code></pre>
+<pre class="r"><code>cat(&quot;Overall model p-value:&quot;, format.pval(f_p_value, digits = 3), &quot;\n&quot;)</code></pre>
+<pre><code>## Overall model p-value: &lt;2e-16</code></pre>
+<pre class="r"><code>anova_table &lt;- anova(model)
+anova_table</code></pre>
+<pre><code>## Analysis of Variance Table
+## 
+## Response: SalePrice
+##                 Df Sum Sq Mean Sq    F value  Pr(&gt;F)    
+## Overall.Qual     1 331.22  331.22 11187.1761 &lt; 2e-16 ***
+## Gr.Liv.Area      1  36.41   36.41  1229.6103 &lt; 2e-16 ***
+## Total.Bsmt.SF    1  12.02   12.02   405.8782 &lt; 2e-16 ***
+## Garage.Cars      1  10.93   10.93   369.0302 &lt; 2e-16 ***
+## Year.Built       1   8.74    8.74   295.2177 &lt; 2e-16 ***
+## Full.Bath        1   0.11    0.11     3.8303 0.05043 .  
+## Bedroom.AbvGr    1   0.04    0.04     1.5128 0.21881    
+## TotRms.AbvGrd    1   0.02    0.02     0.6832 0.40855    
+## Garage.Area      1   0.16    0.16     5.3431 0.02087 *  
+## Neighborhood     1   0.01    0.01     0.2489 0.61791    
+## Residuals     2917  86.37    0.03                       
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>## Coefficient interpretation (log-linear model)
+## Since SalePrice was log-transformed, each coefficient represents
+## the percent change in SalePrice for a one-unit increase in the predictor
+pct_change &lt;- (exp(coefficients) - 1) * 100
+
+interpretation_df &lt;- data.frame(
+  Variable = names,
+  Coefficient = round(coefficients, 5),
+  Percent_Change_SalePrice = round(pct_change, 2)
+)
+
+print(&quot;Percent Change in Sale Price per Unit Increase:&quot;)</code></pre>
+<pre><code>## [1] &quot;Percent Change in Sale Price per Unit Increase:&quot;</code></pre>
+<pre class="r"><code>interpretation_df</code></pre>
+<pre><code>##                    Variable Coefficient Percent_Change_SalePrice
+## (Intercept)     (Intercept)     5.81447                 33411.29
+## Overall.Qual   Overall.Qual     0.11016                    11.65
+## Gr.Liv.Area     Gr.Liv.Area     0.00026                     0.03
+## Total.Bsmt.SF Total.Bsmt.SF     0.00013                     0.01
+## Garage.Cars     Garage.Cars     0.05485                     5.64
+## Year.Built       Year.Built     0.00250                     0.25
+## Full.Bath         Full.Bath    -0.01191                    -1.18
+## Bedroom.AbvGr Bedroom.AbvGr    -0.00376                    -0.38
+## TotRms.AbvGrd TotRms.AbvGrd    -0.00275                    -0.28
+## Garage.Area     Garage.Area     0.00008                     0.01
+## Neighborhood   Neighborhood    -0.00021                    -0.02</code></pre>
 </div>
 
 
