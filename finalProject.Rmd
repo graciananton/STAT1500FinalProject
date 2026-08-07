@@ -13,8 +13,11 @@ Predicting house prices aids in real estimation of homes, approximation of net e
 
 ## Literature Review
 
-Literature Review will be completed. So far sources include the following:
-- https://jse.amstat.org/v19n3/decock.pdf - this paper deals with the importance of individual attributes in Ames Housing Dataset.
+Sources used for this project:
+
+- Morel, L. (2022). Analyzing the house price boom in the suburbs of Canada's major cities during the pandemic. *Bank of Canada Staff Analytical Note*, No. 2022-7. https://www.bankofcanada.ca/2022/06/staff-analytical-note-2022-7/ -- a recent Canadian study that regresses house prices on structural and neighbourhood characteristics (including distance from downtown) across major Canadian cities, finding that the price premium for downtown proximity narrowed sharply during the pandemic as buyers shifted toward larger homes in the suburbs. Supports using a multi-attribute regression approach to separate the effect of physical house characteristics from location.
+- Schaefer, M., & Panagiotoglou, D. (2024). Evaluating the effects of supervised consumption sites on housing prices in Montreal, Canada using interrupted time series and hedonic price models. *Drug and Alcohol Dependence Reports*, 11, 100242. https://doi.org/10.1016/j.dadr.2024.100242 -- a recent Canadian application of hedonic price modeling, adjusting for internal attributes (bedrooms, bathrooms, unit size) and external/neighbourhood attributes to isolate the effect of a single locational factor on price. Demonstrates the same core logic used in this project: holding structural characteristics constant to estimate the independent effect of a given predictor.
+- De Cock, D. (2011). Ames, Iowa: Alternative to the Boston Housing Data as an End of Semester Regression Project. *Journal of Statistics Education*, 19(3). https://jse.amstat.org/v19n3/decock.pdf -- the methodological source for the Ames Housing dataset used in this project.
 
 ```{r loading, echo = TRUE, warning = FALSE}
 library(tidyverse)
@@ -22,7 +25,7 @@ df <- read.csv("AmesHousing.csv")
 print("Finished loading data")
 ```
 ### Data Cleaning
-This data cleaning step selects the relevant columns for predicting the house price, removes any rows which have null data values, adds a YearsAgo column, and converts the categorical attribute (Neighborhood) to a numerical attribute for model training.
+This data cleaning step selects the relevant columns for predicting the house price, removes any rows which have null data values, and converts the categorical attribute (Neighborhood) to a numerical attribute for model training.
 ```{r dataCleaning, echo = TRUE}
 df <- df %>%
     select(Overall.Qual,Gr.Liv.Area,Total.Bsmt.SF,Garage.Cars,Year.Built,Full.Bath, Bedroom.AbvGr
@@ -95,6 +98,26 @@ correlationDf = df[c('Year.Built','SalePrice')]
 
 cor(correlationDf, use='complete.obs')
 ``` 
+
+### Correlation Matrix
+```{r correlationHeatmap, echo=TRUE, warning=FALSE}
+library(reshape2)
+
+numeric_df <- df %>% select(where(is.numeric))
+cor_matrix <- cor(numeric_df, use = "complete.obs")
+round(cor_matrix, 2)
+
+cor_melt <- melt(cor_matrix)
+
+ggplot(cor_melt, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  geom_text(aes(label = round(value, 2)), size = 3) +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0,
+                        limit = c(-1,1), name = "Correlation") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Figure 4: Correlation Matrix of Numeric Predictors", x = "", y = "")
+```
 
 ```{r regression, echo=TRUE}
 
@@ -170,3 +193,57 @@ interpretation_df <- data.frame(
 print("Percent Change in Sale Price per Unit Increase:")
 interpretation_df
 ```
+
+## Regression Diagnostics
+### VIF (Multicollinearity)
+```{r vif, echo=TRUE}
+library(car)
+vif(model)
+```
+Garage.Cars, Garage.Area, and Gr.Liv.Area have the highest VIF values (roughly 4.5-5.6), consistent with the correlations seen in the Figure 4 heatmap (Garage.Area/Garage.Cars = 0.89, Gr.Liv.Area/TotRms.AbvGrd = 0.81). None are high enough to indicate severe multicollinearity (all well under the common rule-of-thumb threshold of 10), but they likely explain why TotRms.AbvGrd, Full.Bath, and Bedroom.AbvGr are not significant below. Neighborhood itself has a very low VIF (~1.04), meaning multicollinearity is not why it comes out non-significant -- see the Key Findings discussion below for why.
+
+### Residual Plots
+```{r residualDiagnostics, echo=TRUE, fig.width=8, fig.height=8}
+par(mfrow = c(2,2))
+plot(model)
+par(mfrow = c(1,1))
+```
+Residuals vs Fitted (Figure 5) and Scale-Location (Figure 7) are both reasonably flat, supporting linearity and constant variance. The Normal Q-Q plot (Figure 6) shows a heavier left tail, driven by a few low-priced outlier sales, so normality holds well in the middle of the distribution but not perfectly in the tails.
+
+## Discussion
+
+### Key Findings
+- **Overall Qual**: strong positive effect, p < 0.001. Each one-unit increase is associated with an estimated 11.65% increase in expected sale price -- the strongest predictor in the model.
+- **Gr Liv Area**: p < 0.001, +0.03% per additional square foot, which compounds to a meaningful price difference over hundreds of square feet.
+- **Year Built**: significant, +0.25% per year more recent (p < 0.001).
+- **Total Bsmt SF** (+0.01%/sq ft, p < 0.001) and **Garage Cars** (+5.64%/car, p < 0.001) both significant; **Garage Area** significant but weaker (+0.01%/sq ft, p = 0.020).
+- **Full Bath** (p = 0.157), **TotRms AbvGrd** (p = 0.492), and **Bedroom AbvGr** (p = 0.496) were not significant, likely because they're redundant with Gr.Liv.Area (see VIF/correlation results above).
+- **Neighborhood** was also *not* statistically significant (p = 0.618) in this version of the model. This is a direct consequence of how it's encoded here: each neighborhood was assigned an arbitrary numeric code (0-27), which forces the model to assume neighborhoods have a fixed, linear ranking and that moving "up" by one code always changes price by the same amount, regardless of which two neighborhoods are being compared. Since that ordering doesn't reflect anything real about the neighborhoods, the true (and, as seen in earlier exploration, often large) location-based price differences get averaged out into a single near-zero slope. This is a limitation of the numeric encoding, not evidence that location doesn't matter.
+
+### Direction of Effects
+All significant coefficients had signs matching economic intuition -- quality, size, basement area, garage capacity, and more recent construction all raised price, with no implausible effects. Neighborhood's near-zero, non-significant coefficient is not economically implausible either, but reflects the limitation of its numeric encoding rather than a real absence of location effects.
+
+### Practical Interpretation
+Overall quality and living area matter most for estimating a home's value in Ames, with basement size, garage capacity, and year built as secondary factors. Bedroom/bathroom counts added little once size was already in the model. Neighborhood's apparent lack of significance here should not be read as "location doesn't matter" -- it is an artifact of treating neighborhood names as if they were ordered numbers, which is a modeling limitation rather than a market fact.
+
+### Expected vs. Actual Results
+Overall Qual and Gr Liv Area dominating the model matched our expectations from the literature review. The complete drop-out of Full Bath, Bedroom AbvGr, and TotRms AbvGrd as non-significant was more surprising. The most surprising result was Neighborhood coming out non-significant, since location is consistently found to matter in the housing literature (Morel, 2022; Schaefer & Panagiotoglou, 2024) -- this pushed us to recognize that the issue was our encoding choice (numeric codes) rather than a genuine absence of a location effect.
+
+## Conclusion
+This project used multiple linear regression to model house sale prices (log-transformed) in Ames, Iowa using overall quality, above-ground living area, total basement square footage, garage capacity, garage area, year built, full bathrooms, bedrooms above grade, total rooms above grade, and neighborhood (encoded numerically). The model achieved R² = 0.822 (Adjusted R² = 0.822), explaining about 82.2% of the variation in log sale price, with a highly significant overall F-test (F = 1349.9 on 10 and 2917 df, p < 2.2e-16). Overall Qual, Gr Liv Area, Year Built, Total Bsmt SF, and Garage Cars/Area were all significant predictors, consistent with the multi-attribute regression approach supported by Morel (2022) and Schaefer and Panagiotoglou (2024), while Full Bath, Bedroom AbvGr, TotRms AbvGrd, and -- notably -- Neighborhood were not significant in this version of the model.
+
+### Limitations
+Only 10 of 80+ available variables were used; some relevant characteristics (lot size, exterior condition, remodel history) were excluded. A more significant limitation is the numeric encoding of Neighborhood: assigning each neighborhood an arbitrary code from 0-27 forces the regression to treat location as if it were a single continuous, linearly-ordered variable, which is not a valid assumption for a categorical attribute with no natural ordering. This is almost certainly why Neighborhood came out statistically non-significant here (p = 0.618) despite location being a well-documented driver of house prices in the broader literature (Morel, 2022; Schaefer & Panagiotoglou, 2024) -- the true, likely large effects of individual neighborhoods are being averaged into a single near-zero slope. VIF showed moderate correlation among Garage.Cars, Garage.Area, and Gr.Liv.Area, and residuals showed a few low-priced outliers violating normality in the tails -- both are additional reasons to interpret individual coefficients with some caution.
+
+### Future Research
+Future work could add more predictors (lot area, exterior quality, remodel age), test neighborhood-by-quality interactions, investigate the flagged outlier sales, or compare against nonlinear/ML approaches, similar to the hedonic modeling frameworks used by Morel (2022) and Schaefer and Panagiotoglou (2024). Given the concerns raised above, re-encoding Neighborhood as a categorical/dummy variable rather than a numeric code would also be a natural next step, since it would let each neighborhood have its own independent effect on price rather than forcing them onto a single arbitrary numeric scale.
+
+## References
+
+Ames Housing Dataset (Iowa State University / Kaggle version). Retrieved from https://www.kaggle.com/datasets/prevek18/ames-housing-dataset
+
+De Cock, D. (2011). Ames, Iowa: Alternative to the Boston Housing Data as an End of Semester Regression Project. *Journal of Statistics Education*, 19(3). https://jse.amstat.org/v19n3/decock.pdf
+
+Morel, L. (2022). Analyzing the house price boom in the suburbs of Canada's major cities during the pandemic. *Bank of Canada Staff Analytical Note*, No. 2022-7. https://www.bankofcanada.ca/2022/06/staff-analytical-note-2022-7/
+
+Schaefer, M., & Panagiotoglou, D. (2024). Evaluating the effects of supervised consumption sites on housing prices in Montreal, Canada using interrupted time series and hedonic price models. *Drug and Alcohol Dependence Reports*, 11, 100242. https://doi.org/10.1016/j.dadr.2024.100242
